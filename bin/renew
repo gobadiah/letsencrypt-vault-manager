@@ -28,7 +28,7 @@ function save_cert() {
 
   mkdir -p $ARCHIVES_PATH
 
-  rm $ARCHIVES_PATH/$host_to_save.tar.gz*
+  rm $ARCHIVES_PATH/$host_to_save.tar.gz* || true
 
   tar cvzf $ARCHIVES_PATH/$host_to_save.tar.gz $host_to_save
   base64 $ARCHIVES_PATH/$host_to_save.tar.gz > $ARCHIVES_PATH/$host_to_save.tar.gz.b64
