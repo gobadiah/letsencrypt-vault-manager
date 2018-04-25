@@ -12,3 +12,4 @@ COPY --from=vault /bin/vault /usr/local/bin/vault
 COPY bin/certify /usr/local/bin/
 COPY bin/renew /usr/local/bin/
 COPY bin/renew /etc/cron.daily/renew
+COPY ttl.py /root/ttl.py

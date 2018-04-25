@@ -34,7 +34,9 @@ function save_cert() {
     chain.pem=@/etc/letsencrypt/live/$host_to_save/chain.pem \
     cert.pem=@/etc/letsencrypt/live/$host_to_save/cert.pem \
     renewal=@/etc/letsencrypt/renewal/$host_to_save.conf \
-    archive=@/root/archives/$host_to_save.tar.gz.b64
+    archive=@/root/archives/$host_to_save.tar.gz.b64 \
+    ttl=$(openssl x509 -enddate -noout \
+      -in /etc/letsencrypt/live/$host_to_save/fullchain.pem | python /root/ttl.py)
 
   popd
 }
