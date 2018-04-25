@@ -1,0 +1,19 @@
+# letsencrypt-vault-manager
+
+This docker image contains nginx, vault and certbot-auto. It has two purposes : certifying new
+domains and renewing them.
+
+To do that, there is a nginx instance running continuously, used to validate domains, and a cronjob
+running daily to renew certificates.
+
+Certificates are stored inside a vault instance, under `secret/certs/host`.
+
+## Requirements
+
+* `VAULT_ADDR` and `VAULT_TOKEN` environment variables with `write` access to `secret/certs`.
+* A way to point to your domains to this instance.
+
+## TODO
+
+* In order to fully automates certification, include an aws composent for modifying route 53
+recordsets on the fly, and setting them back up just right after certification.
