@@ -1,5 +1,6 @@
 #!/bin/bash
 
+ARCHIVES_PATH=/root/archives
 HOST=$1
 
 set -e
@@ -15,9 +16,10 @@ certbot-auto \
 
 cd /etc/letsencrypt/archive
 
-mkdir -p /root/archives
+mkdir -p $ARCHIVES_PATH
 
-tar cvzf /root/archives/$HOST.tar.gz $HOST
+tar cvzf $ARCHIVES_PATH/$HOST.tar.gz $HOST
+base64 $ARCHIVES_PATH/$HOST.tar.gz > $ARCHIVES_PATH/$HOST.tar.gz.b64
 
 vault write secret/certs/$HOST \
   privkey.pem=@/etc/letsencrypt/live/$HOST/privkey.pem \
@@ -25,4 +27,4 @@ vault write secret/certs/$HOST \
   chain.pem=@/etc/letsencrypt/live/$HOST/chain.pem \
   cert.pem=@/etc/letsencrypt/live/$HOST/cert.pem \
   renewal=@/etc/letsencrypt/renewal/$HOST.conf \
-  archive=@/root/archives/$HOST.tar.gz
+  archive=@/root/archives/$HOST.tar.gz.b64

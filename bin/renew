@@ -27,8 +27,9 @@ do
   then
     continue
   fi
-  vault read -field=archive secret/certs/$host > /root/$host.tar.gz
+  vault read -field=archive secret/certs/$host > /root/$host.tar.gz.b64
   vault read -field=renewal secret/certs/$host > /etc/letsencrypt/renewal/$host.conf
+  base64 --decode /root/$host.tar.gz.b64 > /root/$host.tar.gz
   cd /etc/letsencrypt/archive
   tar xvzf /root/$host.tar.gz
   mkdir -p /etc/letsencrypt/live/$host
