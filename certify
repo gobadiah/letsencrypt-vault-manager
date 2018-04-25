@@ -13,6 +13,14 @@ certbot-auto \
   -m $(vault read -field=email secret/certbot) \
   --agree-tos
 
+cd /etc/letsencrypt/archive
+
+tar cvzf ~/$HOST.tar.gz $HOST
+
 vault write secret/certs/$HOST \
   privkey.pem=@/etc/letsencrypt/live/$HOST/privkey.pem \
-  fullchain.pem=@/etc/letsencrypt/live/$HOST/fullchain.pem
+  fullchain.pem=@/etc/letsencrypt/live/$HOST/fullchain.pem \
+  chain.pem=@/etc/letsencrypt/live/$HOST/chain.pem \
+  cert.pem=@/etc/letsencrypt/live/$HOST/cert.pem \
+  renewal=@/etc/letsencrypt/renewal/$HOST.conf \
+  archive=@~/$HOST.tar.gz
