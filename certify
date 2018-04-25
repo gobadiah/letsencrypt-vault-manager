@@ -1,0 +1,18 @@
+#!/bin/bash
+
+HOST=$1
+
+set -e
+
+certbot-auto \
+  certonly \
+  -n \
+  --webroot \
+  --webroot-path /usr/share/nginx/html \
+  -d $HOST \
+  -m $(vault read -field=email secret/certbot) \
+  --agree-tos
+
+vault write secret/certs/$HOST \
+  privkey.pem=@/etc/letsencrypt/live/$HOST/privkey.pem \
+  fullchain.pem=@/etc/letsencrypt/live/$HOST/fullchain.pem
