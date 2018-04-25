@@ -1,5 +1,7 @@
 #!/bin/bash
 
+ARCHIVES_PATH=/root/archives
+
 set -e
 
 mkdir -p /etc/letsencrypt/archive
