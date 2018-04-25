@@ -30,6 +30,8 @@ function save_cert() {
 
   rm $ARCHIVES_PATH/$host_to_save.tar.gz* || true
 
+  pushd /etc/letsencrypt/archive
+
   tar cvzf $ARCHIVES_PATH/$host_to_save.tar.gz $host_to_save
   base64 $ARCHIVES_PATH/$host_to_save.tar.gz > $ARCHIVES_PATH/$host_to_save.tar.gz.b64
 
@@ -40,6 +42,8 @@ function save_cert() {
     cert.pem=@/etc/letsencrypt/live/$host_to_save/cert.pem \
     renewal=@/etc/letsencrypt/renewal/$host_to_save.conf \
     archive=@/root/archives/$host_to_save.tar.gz.b64
+
+  popd
 }
 
 vault list -format=json secret/certs | jq -r '.[]' | while read host
