@@ -1,8 +1,0 @@
-#!/bin/zsh
-
-set -e
-
-aws elb create-load-balancer \
-  --load-balancer-name "letsencrypt-vault-manager" \
-  --listeners "Protocol=TCP,LoadBalancerPort=80,InstancePort=80"
-  --availability-zones "eu-west-1a"

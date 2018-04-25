@@ -15,7 +15,9 @@ certbot-auto \
 
 cd /etc/letsencrypt/archive
 
-tar cvzf ~/$HOST.tar.gz $HOST
+mkdir -p /root/archives
+
+tar cvzf /root/archives/$HOST.tar.gz $HOST
 
 vault write secret/certs/$HOST \
   privkey.pem=@/etc/letsencrypt/live/$HOST/privkey.pem \
@@ -23,4 +25,4 @@ vault write secret/certs/$HOST \
   chain.pem=@/etc/letsencrypt/live/$HOST/chain.pem \
   cert.pem=@/etc/letsencrypt/live/$HOST/cert.pem \
   renewal=@/etc/letsencrypt/renewal/$HOST.conf \
-  archive=@~/$HOST.tar.gz
+  archive=@/root/archives/$HOST.tar.gz

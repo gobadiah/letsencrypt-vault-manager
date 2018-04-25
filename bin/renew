@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -e
+
+mkdir -p /etc/letsencrypt/archive
+mkdir -p /etc/letsencrypt/renewal
+mkdir -p /etc/letsencrypt/live
+
+function check() {
+  host=$1
+  filename=$2
+  vault read -field=$filename secret/certs/$host > /tmp/$filename
+  for file in /etc/letsencrypt/archive/$host/*
+  do
+    diff $file /tmp/$filename 2>&1 >/dev/null
+    if [ $? -eq 0 ]
+    then
+      echo $file
+      return
+    fi
+  done
+}
+
+vault list -format=json secret/certs | jq -r '.[]' | while read host
+do
+  if [ -d /etc/letsencrypt/live/$host ]
+  then
+    continue
+  fi
+  vault read -field=archive secret/certs/$host > /root/$host.tar.gz
+  vault read -field=renewal secret/certs/$host > /etc/letsencrypt/renewal/$host.conf
+  cd /etc/letsencrypt/archive
+  tar xvzf /root/$host.tar.gz
+  mkdir -p /etc/letsencrypt/live/$host
+  cd /etc/letsencrypt/live/$host
+  ln -s ../../archive/$host/$(check $host privkey.pem) privkey.pem
+  ln -s ../../archive/$host/$(check $host fullchain.pem) fullchain.pem
+  ln -s ../../archive/$host/$(check $host chain.pem) chain.pem
+  ln -s ../../archive/$host/$(check $host cert.pem) cert.pem
+done
