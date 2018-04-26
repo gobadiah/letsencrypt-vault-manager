@@ -1,5 +1,17 @@
 #!/bin/bash
 
+VAULT_HOST=$(dig active.vault.service.consul | grep CNAME | sed -E 's/.*CNAME\s+([^ ]+)\.$/\1/')
+export VAULT_ADDR=https://$VAULT_HOST:8200
+
+export VAULT_TOKEN=$(vault write \
+  -tls-skip-verify \
+  -format=json \
+  auth/kubernetes/$CLUSTER_NAME/login \
+  role=$VAULT_ROLE \
+  jwt=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) |
+  jq -r ".auth.client_token"
+  )
+
 ARCHIVES_PATH=/root/archives
 
 set -e
@@ -11,7 +23,7 @@ mkdir -p /etc/letsencrypt/live
 function get_source_filename() {
   host=$1
   filename=$2
-  vault read -field=$filename secret/certs/$host > /tmp/$filename
+  vault read -tls-skip-verify -field=$filename secret/certs/$host > /tmp/$filename
   for file in /etc/letsencrypt/archive/$host/*
   do
     diff $file /tmp/$filename 2>&1 >/dev/null
@@ -35,7 +47,7 @@ function save_cert() {
   tar cvzf $ARCHIVES_PATH/$host_to_save.tar.gz $host_to_save
   base64 $ARCHIVES_PATH/$host_to_save.tar.gz > $ARCHIVES_PATH/$host_to_save.tar.gz.b64
 
-  vault write secret/certs/$host_to_save \
+  vault write -tls-skip-verify secret/certs/$host_to_save \
     privkey.pem=@/etc/letsencrypt/live/$host_to_save/privkey.pem \
     fullchain.pem=@/etc/letsencrypt/live/$host_to_save/fullchain.pem \
     chain.pem=@/etc/letsencrypt/live/$host_to_save/chain.pem \
@@ -48,14 +60,14 @@ function save_cert() {
   popd
 }
 
-vault list -format=json secret/certs | jq -r '.[]' | while read host
+vault list -tls-skip-verify -format=json secret/certs | jq -r '.[]' | while read host
 do
   if [ -d /etc/letsencrypt/live/$host ]
   then
     continue
   fi
-  vault read -field=archive secret/certs/$host > /root/$host.tar.gz.b64
-  vault read -field=renewal secret/certs/$host > /etc/letsencrypt/renewal/$host.conf
+  vault read -tls-skip-verify -field=archive secret/certs/$host > /root/$host.tar.gz.b64
+  vault read -tls-skip-verify -field=renewal secret/certs/$host > /etc/letsencrypt/renewal/$host.conf
   base64 --decode /root/$host.tar.gz.b64 > /root/$host.tar.gz
   cd /etc/letsencrypt/archive
   tar xvzf /root/$host.tar.gz
@@ -69,7 +81,7 @@ done
 
 certbot-auto renew
 
-vault list -format=json secret/certs | jq -r '.[]' | while read host
+vault list -tls-skip-verify -format=json secret/certs | jq -r '.[]' | while read host
 do
   save_cert $host
 done

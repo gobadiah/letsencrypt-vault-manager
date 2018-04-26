@@ -23,7 +23,7 @@ certbot-auto \
   --webroot \
   --webroot-path /usr/share/nginx/html \
   -d $HOST \
-  -m $(vault read -field=email secret/certbot) \
+  -m $(vault read -tls-skip-verify -field=email secret/certbot) \
   --agree-tos
 
 cd /etc/letsencrypt/archive
@@ -40,7 +40,7 @@ function save_cert() {
   tar cvzf $ARCHIVES_PATH/$host_to_save.tar.gz $host_to_save
   base64 $ARCHIVES_PATH/$host_to_save.tar.gz > $ARCHIVES_PATH/$host_to_save.tar.gz.b64
 
-  vault write secret/certs/$host_to_save \
+  vault write -tls-skip-verify secret/certs/$host_to_save \
     privkey.pem=@/etc/letsencrypt/live/$host_to_save/privkey.pem \
     fullchain.pem=@/etc/letsencrypt/live/$host_to_save/fullchain.pem \
     chain.pem=@/etc/letsencrypt/live/$host_to_save/chain.pem \
