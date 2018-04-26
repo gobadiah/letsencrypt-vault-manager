@@ -17,3 +17,14 @@ Certificates are stored inside a vault instance, under `secret/certs/host`.
 
 * In order to fully automates certification, include an aws composent for modifying route 53
 recordsets on the fly, and setting them back up just right after certification.
+
+- enable k8s backend
+- create service account for letsencrypt-vault-manager
+- create vault policy for letsencrypt-vault-manager service account
+- create aws user for vault
+- enable aws backend
+- create role in aws vault for manipulating route53
+- make dockerfile for:
+  - requesting vault token from service account token
+  - using consul-template to launch nginx with ssl certificates
+  - populate container env vars with aws credentials (and vault token / vault addr)
