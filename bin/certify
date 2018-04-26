@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 VAULT_HOST=$(dig active.vault.service.consul | grep CNAME | sed -E 's/.*CNAME\s+([^ ]+)\.$/\1/')
 export VAULT_ADDR=https://$VAULT_HOST:8200
 
@@ -14,8 +16,6 @@ export VAULT_TOKEN=$(vault write \
 
 ARCHIVES_PATH=/root/archives
 HOST=$1
-
-set -e
 
 certbot-auto \
   certonly \
