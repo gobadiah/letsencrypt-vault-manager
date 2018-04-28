@@ -16,10 +16,16 @@ export VAULT_TOKEN=$(vault write \
 
 ACCESS_KEY=$(vault write \
   -tls-skip-verify \
+  -format=json \
   aws/$CLUSTER_NAME/sts/letsencrypt-vault-manager \
   ttl=15m)
 export AWS_SECRET_ACCESS_KEY=$(echo $ACCESS_KEY | jq -r '.data.secret_key')
 export AWS_ACCESS_KEY_ID=$(echo $ACCESS_KEY | jq -r '.data.access_key')
+
+export HOSTED_ZONE_ID=$(vault read \
+  -tls-skip-verify \
+  -field=hosted_zone_id \
+  secret/certbot)
 
 PREVIOUS_DOMAIN=$(redirect_subdomain \
   $HOST \
