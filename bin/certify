@@ -14,6 +14,19 @@ export VAULT_TOKEN=$(vault write \
   jq -r ".auth.client_token"
   )
 
+ACCESS_KEY=$(vault write \
+  -tls-skip-verify \
+  aws/$CLUSTER_NAME/sts/letsencrypt-vault-manager \
+  ttl=15m)
+export AWS_SECRET_ACCESS_KEY=$(echo $ACCESS_KEY | jq -r '.AccessKey.SecretAccessKey')
+export AWS_ACCESS_KEY_ID=$(echo $ACCESS_KEY | jq -r '.AccessKey.AccessKeyId')
+
+PREVIOUS_DOMAIN=$(redirect_subdomain \
+  $HOST \
+  $(vault read -tls-skip-verify -field=host secret/certbot) |
+  jq -r '.ResourceRecords[0].Value'
+  )
+
 ARCHIVES_PATH=/root/archives
 HOST=$1
 
@@ -48,9 +61,13 @@ function save_cert() {
     renewal=@/etc/letsencrypt/renewal/$host_to_save.conf \
     archive=@/root/archives/$host_to_save.tar.gz.b64 \
     ttl=$(openssl x509 -enddate -noout \
-      -in /etc/letsencrypt/live/$host_to_save/fullchain.pem | python /root/ttl.py)
+      -in /etc/letsencrypt/live/$host_to_save/fullchain.pem | python /root/ttl.py)s
 
   popd
 }
 
 save_cert $HOST
+
+if [[ "$PREVIOUS_DOMAIN" != "" ]]; then
+  redirect_subdomain $HOST $PREVIOUS_DOMAIN
+fi

@@ -9,7 +9,11 @@ RUN wget https://dl.eff.org/certbot-auto && chmod a+x certbot-auto && \
 
 COPY --from=vault /bin/vault /usr/local/bin/vault
 
+RUN curl https://raw.githubusercontent.com/gobadiah/devops-toolbox/develop/install.sh | sudo bash
+
 COPY bin/certify /usr/local/bin/
 COPY bin/renew /usr/local/bin/
 COPY bin/renew /etc/cron.daily/renew
 COPY ttl.py /root/ttl.py
+
+CMD cron && nginx -g "daemon off;"

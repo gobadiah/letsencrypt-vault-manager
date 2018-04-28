@@ -14,6 +14,19 @@ export VAULT_TOKEN=$(vault write \
   jq -r ".auth.client_token"
   )
 
+ACCESS_KEY=$(vault write \
+  -tls-skip-verify \
+  aws/$CLUSTER_NAME/sts/letsencrypt-vault-manager \
+  ttl=60m)
+export AWS_SECRET_ACCESS_KEY=$(echo $ACCESS_KEY | jq -r '.AccessKey.SecretAccessKey')
+export AWS_ACCESS_KEY_ID=$(echo $ACCESS_KEY | jq -r '.AccessKey.AccessKeyId')
+
+PREVIOUS_DOMAIN=$(redirect_subdomain \
+  $HOST \
+  $(vault read -tls-skip-verify -field=host secret/certbot) |
+  jq -r '.ResourceRecords[0].Value'
+  )
+
 ARCHIVES_PATH=/root/archives
 
 mkdir -p /etc/letsencrypt/archive
@@ -33,6 +46,23 @@ function get_source_filename() {
       return
     fi
   done
+}
+
+to_redirect_back=()
+to_redirect_to=()
+target_domain=$(vault read -tls-skip-verify -field=host secret/certbot)
+function redirect_if_needed() {
+  host_to_redirect=$1
+
+  notAfter=$(openssl x509 -noout -in /etc/letsencrypt/live/$host_to_redirect/fullchain.pem -enddate)
+  ttl=$(echo "$notAfter" | python /root/ttl.py) # certficate ttl in seconds
+  if [ $ttl -lt 2592000 ]; then # 30 days (letsencrypt default renewal ttl)
+    to_redirect_back+=$host_to_direct
+    to_redirect_to+=$(redirect_subdomain \
+      $host_to_redirect \
+      $target_domain |
+      jq -r '.ResourceRecords[0].Value')
+  fi
 }
 
 function save_cert() {
@@ -55,7 +85,7 @@ function save_cert() {
     renewal=@/etc/letsencrypt/renewal/$host_to_save.conf \
     archive=@/root/archives/$host_to_save.tar.gz.b64 \
     ttl=$(openssl x509 -enddate -noout \
-      -in /etc/letsencrypt/live/$host_to_save/fullchain.pem | python /root/ttl.py)
+      -in /etc/letsencrypt/live/$host_to_save/fullchain.pem | python /root/ttl.py)s
 
   popd
 }
@@ -64,6 +94,7 @@ vault list -tls-skip-verify -format=json secret/certs | jq -r '.[]' | while read
 do
   if [ -d /etc/letsencrypt/live/$host ]
   then
+    redirect_if_needed $host
     continue
   fi
   vault read -tls-skip-verify -field=archive secret/certs/$host > /root/$host.tar.gz.b64
@@ -77,6 +108,7 @@ do
   ln -s ../../archive/$host/$(get_source_filename $host fullchain.pem) fullchain.pem
   ln -s ../../archive/$host/$(get_source_filename $host chain.pem) chain.pem
   ln -s ../../archive/$host/$(get_source_filename $host cert.pem) cert.pem
+  redirect_if_needed $host
 done
 
 certbot-auto renew
@@ -84,4 +116,13 @@ certbot-auto renew
 vault list -tls-skip-verify -format=json secret/certs | jq -r '.[]' | while read host
 do
   save_cert $host
+done
+
+for i in {1..${#to_redirect_back}}
+do
+  host=${to_redirect_back[$i]}
+  target=${to_redirect_to[$i]}
+  if [[ "$target" != "" ]]; then
+    redirect_subdomain $host $target
+  fi
 done
