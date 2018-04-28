@@ -18,8 +18,8 @@ ACCESS_KEY=$(vault write \
   -tls-skip-verify \
   aws/$CLUSTER_NAME/sts/letsencrypt-vault-manager \
   ttl=60m)
-export AWS_SECRET_ACCESS_KEY=$(echo $ACCESS_KEY | jq -r '.AccessKey.SecretAccessKey')
-export AWS_ACCESS_KEY_ID=$(echo $ACCESS_KEY | jq -r '.AccessKey.AccessKeyId')
+export AWS_SECRET_ACCESS_KEY=$(echo $ACCESS_KEY | jq -r '.data.secret_key')
+export AWS_ACCESS_KEY_ID=$(echo $ACCESS_KEY | jq -r '.data.access_key')
 
 PREVIOUS_DOMAIN=$(redirect_subdomain \
   $HOST \
