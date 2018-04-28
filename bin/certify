@@ -2,6 +2,7 @@
 
 set -e
 
+HOST=$1
 VAULT_HOST=$(dig active.vault.service.consul | grep CNAME | sed -E 's/.*CNAME\s+([^ ]+)\.$/\1/')
 export VAULT_ADDR=https://$VAULT_HOST:8200
 
@@ -34,7 +35,6 @@ PREVIOUS_DOMAIN=$(redirect_subdomain \
   )
 
 ARCHIVES_PATH=/root/archives
-HOST=$1
 
 certbot-auto \
   certonly \
