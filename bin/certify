@@ -22,17 +22,24 @@ ACCESS_KEY=$(vault write \
   ttl=15m)
 export AWS_SECRET_ACCESS_KEY=$(echo $ACCESS_KEY | jq -r '.data.secret_key')
 export AWS_ACCESS_KEY_ID=$(echo $ACCESS_KEY | jq -r '.data.access_key')
+export AWS_SESSION_TOKEN=$(echo $ACCESS_KEY | jq -r '.data.security_token')
 
 export HOSTED_ZONE_ID=$(vault read \
   -tls-skip-verify \
   -field=hosted_zone_id \
   secret/certbot)
 
+target=$(vault read -tls-skip-verify -field=host secret/certbot)
+echo "Redirecting $HOST to $target"
 PREVIOUS_DOMAIN=$(redirect_subdomain \
   $HOST \
-  $(vault read -tls-skip-verify -field=host secret/certbot) |
+  $target |
   jq -r '.ResourceRecords[0].Value'
   )
+echo "Previous target is $PREVIOUS_DOMAIN"
+
+echo "Sleeping 30 seconds for the records to be correctly set in aws..."
+sleep 30
 
 ARCHIVES_PATH=/root/archives
 
