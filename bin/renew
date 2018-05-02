@@ -8,7 +8,7 @@ export VAULT_ADDR=https://$VAULT_HOST:8200
 export VAULT_TOKEN=$(vault write \
   -tls-skip-verify \
   -format=json \
-  auth/kubernetes/$CLUSTER_NAME/login \
+  auth/$CLUSTER_NAME/k8s/login \
   role=$VAULT_ROLE \
   jwt=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) |
   jq -r ".auth.client_token"
@@ -17,7 +17,7 @@ export VAULT_TOKEN=$(vault write \
 ACCESS_KEY=$(vault write \
   -tls-skip-verify \
   -format=json \
-  aws/$CLUSTER_NAME/sts/letsencrypt-vault-manager \
+  $CLUSTER_NAME/aws/sts/letsencrypt-vault-manager \
   ttl=60m)
 export AWS_SECRET_ACCESS_KEY=$(echo $ACCESS_KEY | jq -r '.data.secret_key')
 export AWS_ACCESS_KEY_ID=$(echo $ACCESS_KEY | jq -r '.data.access_key')
