@@ -9,7 +9,7 @@ export VAULT_ADDR=https://$VAULT_HOST:8200
 export VAULT_TOKEN=$(vault write \
   -tls-skip-verify \
   -format=json \
-  auth/kubernetes/$CLUSTER_NAME/login \
+  auth/$CLUSTER_NAME/k8s/login \
   role=$VAULT_ROLE \
   jwt=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) |
   jq -r ".auth.client_token"
