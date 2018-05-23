@@ -4,6 +4,7 @@ set -e
 
 VAULT_HOST=$(dig active.vault.service.consul | grep CNAME | sed -E 's/.*CNAME\s+([^ ]+)\.$/\1/')
 export VAULT_ADDR=https://$VAULT_HOST:8200
+VAULT_CERTS_PATH=${VAULT_CERTS_PATH:="secret/env/certs"}
 
 export VAULT_TOKEN=$(vault write \
   -tls-skip-verify \
@@ -28,12 +29,6 @@ export HOSTED_ZONE_ID=$(vault read \
   -field=hosted_zone_id \
   secret/certbot)
 
-PREVIOUS_DOMAIN=$(redirect_subdomain \
-  $HOST \
-  $(vault read -tls-skip-verify -field=host secret/certbot) |
-  jq -r '.ResourceRecords[0].Value'
-  )
-
 ARCHIVES_PATH=/root/archives
 
 mkdir -p /etc/letsencrypt/archive
@@ -43,7 +38,7 @@ mkdir -p /etc/letsencrypt/live
 function get_source_filename() {
   host=$1
   filename=$2
-  vault read -tls-skip-verify -field=$filename secret/certs/$host > /tmp/$filename
+  vault read -tls-skip-verify -field=$filename $VAULT_CERTS_PATH/$host > /tmp/$filename
   for file in /etc/letsencrypt/archive/$host/*
   do
     diff $file /tmp/$filename 2>&1 >/dev/null
@@ -84,7 +79,7 @@ function save_cert() {
   tar cvzf $ARCHIVES_PATH/$host_to_save.tar.gz $host_to_save
   base64 $ARCHIVES_PATH/$host_to_save.tar.gz > $ARCHIVES_PATH/$host_to_save.tar.gz.b64
 
-  vault write -tls-skip-verify secret/certs/$host_to_save \
+  vault write -tls-skip-verify $VAULT_CERTS_PATH/$host_to_save \
     privkey.pem=@/etc/letsencrypt/live/$host_to_save/privkey.pem \
     fullchain.pem=@/etc/letsencrypt/live/$host_to_save/fullchain.pem \
     chain.pem=@/etc/letsencrypt/live/$host_to_save/chain.pem \
@@ -97,15 +92,15 @@ function save_cert() {
   popd
 }
 
-vault list -tls-skip-verify -format=json secret/certs | jq -r '.[]' | while read host
+vault list -tls-skip-verify -format=json $VAULT_CERTS_PATH | jq -r '.[]' | while read host
 do
   if [ -d /etc/letsencrypt/live/$host ]
   then
     redirect_if_needed $host
     continue
   fi
-  vault read -tls-skip-verify -field=archive secret/certs/$host > /root/$host.tar.gz.b64
-  vault read -tls-skip-verify -field=renewal secret/certs/$host > /etc/letsencrypt/renewal/$host.conf
+  vault read -tls-skip-verify -field=archive $VAULT_CERTS_PATH/$host > /root/$host.tar.gz.b64
+  vault read -tls-skip-verify -field=renewal $VAULT_CERTS_PATH/$host > /etc/letsencrypt/renewal/$host.conf
   base64 --decode /root/$host.tar.gz.b64 > /root/$host.tar.gz
   cd /etc/letsencrypt/archive
   tar xvzf /root/$host.tar.gz
@@ -118,17 +113,22 @@ do
   redirect_if_needed $host
 done
 
+if [ ${#to_redirect_back[@]} -eq 0 ]; then
+  echo "Nothing to renew, exiting."
+  exit 0
+fi
+
 echo "Sleeping 30 seconds for the records to be correctly set in aws..."
 sleep 30
 
 certbot-auto renew
 
-vault list -tls-skip-verify -format=json secret/certs | jq -r '.[]' | while read host
+vault list -tls-skip-verify -format=json $VAULT_CERTS_PATH | jq -r '.[]' | while read host
 do
   save_cert $host
 done
 
-for i in {1..${#to_redirect_back}}
+for i in $(seq 0 $((${#to_redirect_back[@]}-1)))
 do
   host=${to_redirect_back[$i]}
   target=${to_redirect_to[$i]}

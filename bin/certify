@@ -5,6 +5,7 @@ set -e
 HOST=$1
 VAULT_HOST=$(dig active.vault.service.consul | grep CNAME | sed -E 's/.*CNAME\s+([^ ]+)\.$/\1/')
 export VAULT_ADDR=https://$VAULT_HOST:8200
+VAULT_CERTS_PATH=${VAULT_CERTS_PATH:="secret/env/certs"}
 
 export VAULT_TOKEN=$(vault write \
   -tls-skip-verify \
@@ -66,7 +67,7 @@ function save_cert() {
   tar cvzf $ARCHIVES_PATH/$host_to_save.tar.gz $host_to_save
   base64 $ARCHIVES_PATH/$host_to_save.tar.gz > $ARCHIVES_PATH/$host_to_save.tar.gz.b64
 
-  vault write -tls-skip-verify secret/certs/$host_to_save \
+  vault write -tls-skip-verify $VAULT_CERTS_PATH/$host_to_save \
     privkey.pem=@/etc/letsencrypt/live/$host_to_save/privkey.pem \
     fullchain.pem=@/etc/letsencrypt/live/$host_to_save/fullchain.pem \
     chain.pem=@/etc/letsencrypt/live/$host_to_save/chain.pem \
