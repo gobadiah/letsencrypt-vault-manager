@@ -4,7 +4,7 @@ set -e
 
 VAULT_HOST=$(dig active.vault.service.consul | grep CNAME | sed -E 's/.*CNAME\s+([^ ]+)\.$/\1/')
 export VAULT_ADDR=https://$VAULT_HOST:8200
-VAULT_CERTS_PATH=${VAULT_CERTS_PATH:="secret/env/certs"}
+VAULT_CERTS_PATH=${VAULT_CERTS_PATH:="secret/certs/env"}
 
 export VAULT_TOKEN=$(vault write \
   -tls-skip-verify \
