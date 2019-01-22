@@ -58,12 +58,14 @@ function redirect_if_needed() {
 
   notAfter=$(openssl x509 -noout -in /etc/letsencrypt/live/$host_to_redirect/fullchain.pem -enddate)
   ttl=$(echo "$notAfter" | python /root/ttl.py) # certficate ttl in seconds
+  echo "Checking host $host_to_redirect : $notAfter $ttl"
   if [ $ttl -lt 2592000 ]; then # 30 days (letsencrypt default renewal ttl)
-    to_redirect_back+=$host_to_direct
-    to_redirect_to+=$(redirect_subdomain \
+    to_redirect_back+=("$host_to_redirect")
+    to_redirect_to+=("$(redirect_subdomain \
       $host_to_redirect \
       $target_domain |
-      jq -r '.ResourceRecords[0].Value')
+      jq -r '.ResourceRecords[0].Value')")
+      echo "Added $host_to_redirect to $to_redirect_back and $to_redirect_to (${#to_redirect_back[@]})"
   fi
 }
 
@@ -92,8 +94,10 @@ function save_cert() {
   popd
 }
 
-vault list -tls-skip-verify -format=json $VAULT_CERTS_PATH | jq -r '.[]' | while read host
+echo "${#to_redirect_back[@]}"
+while read host
 do
+  echo "${#to_redirect_back[@]}"
   if [ -d /etc/letsencrypt/live/$host ]
   then
     redirect_if_needed $host
@@ -111,7 +115,13 @@ do
   ln -s ../../archive/$host/$(get_source_filename $host chain.pem) chain.pem
   ln -s ../../archive/$host/$(get_source_filename $host cert.pem) cert.pem
   redirect_if_needed $host
-done
+done <<< "$(vault list -tls-skip-verify -format=json $VAULT_CERTS_PATH | jq -r '.[]')"
+echo "${#to_redirect_back[@]}"
+
+echo "to_redirect_back = $to_redirect_back"
+echo "count = ${#to_redirect_back[@]}"
+echo "to_redirect_to = $to_redirect_back"
+echo "count = ${#to_redirect_to[@]}"
 
 if [ ${#to_redirect_back[@]} -eq 0 ]; then
   echo "Nothing to renew, exiting."
