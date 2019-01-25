@@ -91,6 +91,14 @@ function save_cert() {
     ttl=$(openssl x509 -enddate -noout \
       -in /etc/letsencrypt/live/$host_to_save/fullchain.pem | python /root/ttl.py)s
 
+	if [[ "$host_to_save" == "www.ubble.ai" ||
+		"$host_to_save" == "web.ubble.ai" ||
+		"$host_to_save" == "janus.ubble.ai" ]]; then
+		vault write -tls-skip-verify secret/certs/$host_to_save \  # hardcoded path ...
+			privkey.pem=@/etc/letsencrypt/live/$host_to_save/privkey.pem \
+			fullchain.pem=@/etc/letsencrypt/live/$host_to_save/fullchain.pem
+	fi
+
   popd
 }
 
