@@ -2,6 +2,8 @@
 
 set -e
 
+echo "Start renewal at $(date)"
+
 VAULT_HOST=$(dig active.vault.service.consul | grep CNAME | sed -E 's/.*CNAME\s+([^ ]+)\.$/\1/')
 export VAULT_ADDR=https://$VAULT_HOST:8200
 VAULT_CERTS_PATH=${VAULT_CERTS_PATH:="secret/certs/env"}
@@ -131,15 +133,10 @@ echo "count = ${#to_redirect_back[@]}"
 echo "to_redirect_to = $to_redirect_back"
 echo "count = ${#to_redirect_to[@]}"
 
-if [ ${#to_redirect_back[@]} -eq 0 ]; then
-  echo "Nothing to renew, exiting."
-  exit 0
-fi
-
 echo "Sleeping 30 seconds for the records to be correctly set in aws..."
 sleep 30
 
-certbot-auto renew
+certbot-auto renew || true  # in case of failure we still want to save the certs
 
 vault list -tls-skip-verify -format=json $VAULT_CERTS_PATH | jq -r '.[]' | while read host
 do
